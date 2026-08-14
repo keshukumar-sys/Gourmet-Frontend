@@ -1,0 +1,79 @@
+/* Shared by the admin and staff sign-in screens */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(241, 183, 168, 0.14), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(42, 133, 185, 0.18), transparent 50%),
+    var(--sc-navy);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-lg);
+  padding: clamp(1.75rem, 5vw, 2.75rem);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--sc-shadow);
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-brand h1 {
+  font-family: var(--sc-font-heading);
+  font-size: clamp(1.9rem, 5vw, 2.5rem);
+  font-weight: 700;
+  color: var(--sc-blush);
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.5px;
+}
+
+.auth-brand p {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--sc-text-faint);
+}
+
+.auth-card h2 {
+  font-family: var(--sc-font-heading);
+  font-size: 1.45rem;
+  color: var(--sc-text);
+  margin: 0 0 0.3rem;
+  text-align: center;
+}
+
+.auth-sub {
+  text-align: center;
+  color: var(--sc-text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.75rem;
+}
+
+.auth-links {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+.auth-links a {
+  color: var(--sc-blush);
+  text-decoration: none;
+  transition: color var(--sc-ease);
+}
+
+.auth-links a:hover {
+  color: var(--sc-blush-light);
+  text-decoration: underline;
+}

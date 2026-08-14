@@ -1,0 +1,144 @@
+/*
+ * Menu-card designer.
+ * Everything here is scoped to .tpl-* — the previous version set global
+ * `*` and `body` rules, which leaked a different background across the app.
+ */
+
+.tpl-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--sc-gap);
+  align-items: start;
+}
+
+.tpl-controls { position: sticky; top: 1.5rem; }
+
+.tpl-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--sc-surface-raised);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  padding: 0.85rem;
+}
+
+.tpl-carousel--font { margin-top: 0.85rem; padding: 0.6rem 0.85rem; }
+
+.tpl-arrow {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--sc-border-strong);
+  color: var(--sc-text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all var(--sc-ease);
+}
+
+.tpl-arrow:hover {
+  border-color: var(--sc-blush);
+  color: var(--sc-blush);
+  background: rgba(241, 183, 168, 0.12);
+}
+
+.tpl-preview {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.tpl-preview img {
+  width: 100%;
+  max-width: 150px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--sc-radius-sm);
+  border: 1px solid var(--sc-border);
+  display: block;
+  margin: 0 auto 0.5rem;
+}
+
+.tpl-preview p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--sc-blush);
+  font-weight: 600;
+}
+
+.tpl-font-name {
+  flex: 1;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--sc-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Range sliders in brand colours */
+.tpl-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--sc-blush);
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+.tpl-controls input[type="range"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Preview stage */
+.tpl-stage { min-width: 0; }
+
+.tpl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sc-gap);
+}
+
+.tpl-card {
+  aspect-ratio: 3 / 4;
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--sc-radius);
+  border: 1px solid var(--sc-border);
+  box-shadow: var(--sc-shadow-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.tpl-card__content {
+  text-align: center;
+  max-height: 100%;
+  overflow: auto;
+  width: 100%;
+}
+
+.tpl-card__content h3 {
+  margin: 0 0 0.85rem;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.tpl-card__content p {
+  margin: 0 0 0.35rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media (max-width: 960px) {
+  .tpl-layout { grid-template-columns: 1fr; }
+  .tpl-controls { position: static; }
+}

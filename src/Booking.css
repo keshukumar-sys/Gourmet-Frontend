@@ -1,0 +1,203 @@
+/* MAIN CONTAINER */
+.booking-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+
+  background:#164764;
+
+  overflow: hidden;
+}
+
+/* GLASS CARD */
+.booking-card {
+  width: 100%;
+  max-width: 850px;
+
+  background: rgba(255, 255, 255, 0.05);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  border-radius: 25px;
+
+  backdrop-filter: blur(15px);
+
+  -webkit-backdrop-filter: blur(15px);
+  overflow: hidden;
+
+  animation: fadeIn 1s ease;
+}
+
+/* HEADER */
+.booking-header {
+  text-align: center;
+  padding: 2.5rem 2rem 1rem;
+}
+
+.booking-header h1 {
+  color: #f1b7a8;
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  font-family: Cormorant2;
+}
+
+.booking-header p {
+  color: rgba(255,255,255,0.75);
+  font-size: 1.5rem;  
+    font-family: Monsterrat;
+}
+
+/* FORM GRID */
+.booking-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+
+  padding: 2rem;
+}
+
+/* INPUT GROUP */
+.input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  color: white;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  font-family: Monsterrat;
+}
+
+/* INPUTS */
+.input-group input,
+.input-group textarea {
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+
+  border: 1px solid rgba(255,255,255,0.15);
+
+  border-radius: 14px !important;
+
+  padding: 14px 18px;
+
+  color: white;
+
+  outline: none;
+
+  transition: 0.3s ease;
+  font-family: Monsterrat;
+
+  font-size: 15px;
+}
+
+/* PLACEHOLDER */
+.input-group input::placeholder,
+.input-group textarea::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+
+/* FOCUS EFFECT */
+.input-group input:focus,
+.input-group textarea:focus {
+  border-color: #b14cff;
+
+  box-shadow:
+    0 0 10px rgba(38, 157, 255, 0.8),
+    0 0 20px rgba(38, 107, 255, 0.5);
+
+  background: rgba(255,255,255,0.12);
+}
+
+/* TEXTAREA */
+.input-group textarea {
+  resize: none;
+}
+
+/* FULL WIDTH */
+.full-width {
+  grid-column: span 2;
+}
+
+/* BUTTON SECTION */
+.button-section {
+  grid-column: span 2;
+  text-align: center;
+  margin-top: 10px;
+  gap: 1rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* BUTTON */
+.button-section button {
+  border: none;
+
+  padding: 14px 50px;
+
+  border-radius: 40px;
+
+  font-size: 18px;
+
+  font-weight: 600;
+
+  color: white;
+
+  cursor: pointer;
+
+  background: #2a85b9;
+
+
+  transition: all 0.4s ease;
+}
+
+/* BUTTON HOVER */
+.button-section button:hover {
+  transform: translateY(-4px) scale(1.03);
+
+  box-shadow:
+    0 0 5px rgba(38, 157, 255, 0.8),
+    0 0 50px rgba(38, 107, 255, 0.5);
+
+  background: #2a85b9;
+}
+
+/* FADE ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+
+  .booking-form {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width,
+  .button-section {
+    grid-column: span 1;
+  }
+
+  .booking-header h1 {
+    font-size: 2.2rem;
+  }
+
+  .booking-card {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+}

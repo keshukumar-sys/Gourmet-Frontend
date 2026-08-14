@@ -1,0 +1,111 @@
+.events-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.events-head h1 {
+  font-family: var(--sc-font-heading);
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--sc-blush);
+  margin: 0 0 0.25rem;
+}
+
+.events-head p {
+  margin: 0;
+  color: var(--sc-text-muted);
+  font-size: 0.9rem;
+}
+
+.events-search { margin-bottom: 1.5rem; }
+
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--sc-gap);
+}
+
+.event-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-lg);
+  padding: 1.35rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform var(--sc-ease), border-color var(--sc-ease), box-shadow var(--sc-ease);
+}
+
+.event-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(241, 183, 168, 0.4);
+  box-shadow: var(--sc-shadow);
+}
+
+.event-card.is-past { opacity: 0.68; }
+
+.event-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.event-card__head h2 {
+  font-family: var(--sc-font-heading);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--sc-blush);
+  margin: 0;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.event-card__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin: 0 0 1.25rem;
+  flex: 1;
+}
+
+.event-card__facts dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--sc-text-faint);
+  margin-bottom: 0.2rem;
+}
+
+.event-card__facts dd {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--sc-text);
+  word-break: break-word;
+}
+
+.event-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sc-border);
+}
+
+.event-card__buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.event-card__buttons .sc-btn { flex: 1; min-width: 92px; }
+
+@media (max-width: 480px) {
+  .event-card__facts { grid-template-columns: 1fr; }
+}

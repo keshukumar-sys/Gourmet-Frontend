@@ -1,0 +1,53 @@
+.allevents-admin-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* NavLink renders an <a>; keep it aligned with the button primitives */
+.allevents-admin-actions .sc-btn { text-decoration: none; }
+
+.allevents-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sc-gap);
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.allevents-filters {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 999px;
+  flex-wrap: wrap;
+}
+
+.allevents-filter {
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--sc-text-muted);
+  font-family: var(--sc-font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--sc-ease);
+}
+
+.allevents-filter:hover { color: var(--sc-text); }
+
+.allevents-filter.is-active {
+  background: var(--sc-blush);
+  color: var(--sc-navy-deep);
+}
+
+@media (max-width: 820px) {
+  .allevents-controls { grid-template-columns: 1fr; }
+  .allevents-filters { justify-content: space-between; }
+  .allevents-filter { flex: 1; text-align: center; }
+}
