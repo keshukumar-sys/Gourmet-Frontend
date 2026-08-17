@@ -1,8 +1,9 @@
 {
- "redirects": [
+  "redirects": [
     {
-      "src": "/(.*)",
-      "dest": "index.js"
+      "source": "/(.*)",
+      "destination": "/index.js",
+      "permanent": false
     }
   ]
 }
