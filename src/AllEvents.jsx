@@ -91,8 +91,6 @@ export default function AllEvents() {
           </div>
 
           <div className="allevents-admin-actions">
-            <NavLink to="/createUser" className="sc-btn sc-btn--ghost sc-btn--sm">Create user</NavLink>
-            <NavLink to="/createAdmin" className="sc-btn sc-btn--ghost sc-btn--sm">Create admin</NavLink>
             <NavLink to="/addTemplate" className="sc-btn sc-btn--sm">Add template</NavLink>
           </div>
         </div>

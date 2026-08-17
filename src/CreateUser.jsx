@@ -45,7 +45,7 @@ export default function CreateAccount({ role = "user" }) {
       });
 
       toast.success(`${isAdminForm ? "Admin" : "User"} created successfully.`);
-      navigate("/allEvents");
+      navigate("/allUsers");
     } catch (err) {
       toast.error(errorMessage(err, "Could not create the account"));
     } finally {
@@ -126,7 +126,7 @@ export default function CreateAccount({ role = "user" }) {
           </button>
 
           <p className="auth-links">
-            <NavLink to="/allEvents">← Back to all events</NavLink>
+            <NavLink to="/allUsers">← Back to all users</NavLink>
           </p>
         </form>
       </div>

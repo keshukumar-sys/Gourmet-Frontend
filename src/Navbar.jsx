@@ -24,7 +24,7 @@ export default function Navbar() {
   };
 
   const links = adminToken
-    ? [{ to: "/allEvents", label: "All Events" }, { to: "/addTemplate", label: "Templates" }, { to: "/addMenu", label: "Menus" }]
+    ? [{ to: "/allEvents", label: "All Events" }, { to: "/allUsers", label: "Users" }, { to: "/addTemplate", label: "Templates" }, { to: "/addMenu", label: "Menus" }]
     : userToken
       ? [{ to: "/events", label: "Events" }]
       : [{ to: "/", label: "Login" }, { to: "/admin", label: "Admin" }];

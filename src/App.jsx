@@ -13,6 +13,7 @@ import CreateUser from './CreateUser'
 import CreateAdmin from './CreateAdmin'
 import ForgotPassword from './ForgotPassword'
 import AllEvents from './AllEvents'
+import AllUsers from './AllUsers'
 import Summary from './Summary'
 import MenuSelection from './MenuSelection'
 import TemplateSelection from './TemplateSelection'
@@ -42,6 +43,7 @@ function App() {
           <Route path="/addMenu" element={<AddMenu />} />
           <Route path="/temp" element={<Temp />} />
           <Route path="/allEvents" element={<AllEvents />} />
+          <Route path="/allUsers" element={<AllUsers />} />
           <Route path="/events" element={<Events />} />
           <Route path="/menuSection" element={<MenuSection />} />
           <Route path="/menuSelection" element={<MenuSelection />} />
