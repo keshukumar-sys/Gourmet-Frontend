@@ -1,0 +1,8 @@
+{
+ "redirects": [
+    {
+      "src": "/(.*)",
+      "dest": "index.js"
+    }
+  ]
+}
