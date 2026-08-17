@@ -8,7 +8,7 @@ import axios from "axios";
  * instead of each page hand-rolling (and sometimes forgetting) the prefix.
  */
 const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://gourmet-event-backend.onrender.com/api/v1" : "/api/v1"),
   withCredentials: true
 });
 
@@ -55,7 +55,8 @@ export const imageUrl = (url) => {
   if (!url) return "";
   // Bundled assets and blob previews are already same-origin — leave them be.
   if (!/^https?:\/\//i.test(url)) return url;
-  return `/api/v1/media/image?url=${encodeURIComponent(url)}`;
+  const base = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://gourmet-event-backend.onrender.com/api/v1" : "/api/v1");
+  return `${base}/media/image?url=${encodeURIComponent(url)}`;
 };
 
 /** Pull a human-readable message out of an axios error. */
