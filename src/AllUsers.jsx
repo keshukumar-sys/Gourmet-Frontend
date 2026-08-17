@@ -112,7 +112,7 @@ export default function AllUsers() {
                 </header>
 
                 <dl className="event-card__facts">
-                  <div><dt>Email</dt><dd>{row.email}</dd></div>
+                  <div style={{ gridColumn: '1 / -1' }}><dt>Email</dt><dd style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.email}</dd></div>
                   <div><dt>Mobile</dt><dd>{row.mobileNumber || "—"}</dd></div>
                   <div><dt>Role</dt><dd>{row.role}</dd></div>
                 </dl>
@@ -180,7 +180,7 @@ function EditUserModal({ user, onClose, onSaved }) {
 
   return (
     <div className="ev-modal" role="dialog" aria-modal="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9999 }}>
-      <div className="ev-modal__panel sc-shell" style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--sc-bg-surface)', padding: '2rem', borderRadius: '12px' }}>
+      <div className="ev-modal__panel sc-shell" style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--sc-surface)', padding: '2rem', borderRadius: '12px', maxHeight: '90vh', overflowY: 'auto' }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ margin: 0 }}>Edit User</h2>
           <button className="sc-btn sc-btn--ghost sc-btn--sm" onClick={onClose} style={{ padding: '0.25rem 0.5rem' }}>×</button>

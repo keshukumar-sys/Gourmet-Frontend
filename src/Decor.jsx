@@ -78,7 +78,7 @@ export default function Decor() {
               min="0"
               value={estimatedPrice}
               onChange={(e) => setEstimatedPrice(e.target.value)}
-              placeholder="0"
+              placeholder="₹ 0"
             />
             <span className="sc-hint">
               {Number(estimatedPrice) > 0

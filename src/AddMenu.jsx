@@ -15,21 +15,23 @@ function AddMenu() {
     const [images, setImages] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    const [menus, setMenus] = useState([]);
+    const [allMenus, setAllMenus] = useState([]);
     const [selectedMenus, setSelectedMenus] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [editingId, setEditingId] = useState(null);
 
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState("");
     const limit = 10;
 
-    const fetchMenus = async (currentPage = 1, currentSearch = search) => {
+    const fetchMenus = async (currentSearch = search) => {
         try {
-            const res = await api.get(`/menu/all?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(currentSearch)}`);
+            const res = await api.get(`/menu/all?page=1&limit=10000&search=${encodeURIComponent(currentSearch)}`);
             if (res.data && res.data.menu) {
-                setMenus(res.data.menu);
-                setTotalPages(res.data.totalPages || 1);
+                const reversedData = [...res.data.menu].reverse();
+                setAllMenus(reversedData);
+                setTotalPages(Math.ceil(reversedData.length / limit) || 1);
             }
         } catch (error) {
             console.error(error);
@@ -37,8 +39,8 @@ function AddMenu() {
     };
 
     useEffect(() => {
-        fetchMenus(page, search);
-    }, [page, search]);
+        fetchMenus(search);
+    }, [search]);
 
     const handleImageChange = (e) => {
         const files = e.target.files;
@@ -83,9 +85,15 @@ function AddMenu() {
                 }
             }
 
-            const res = await api.post("/menu/create", formData);
+            let res;
+            if (editingId) {
+                res = await api.patch(`/menu/patch/${editingId}`, formData);
+            } else {
+                res = await api.post("/menu/create", formData);
+            }
+
             if (res.data && res.data.success) {
-                toast.success(res.data.message || "Menu Added Successfully");
+                toast.success(res.data.message || (editingId ? "Menu Updated" : "Menu Added Successfully"));
                 setDishName("");
                 setDishIngredients("");
                 setPrice("");
@@ -94,9 +102,10 @@ function AddMenu() {
                 setAllergens("");
                 setImages(null);
                 setPreviewUrl(null);
+                setEditingId(null);
                 fetchMenus();
             } else {
-                toast.error(res.data.message || "Failed to add menu");
+                toast.error(res.data.message || (editingId ? "Failed to update menu" : "Failed to add menu"));
             }
         } catch (error) {
             toast.error(errorMessage(error, "Failed to add menu"));
@@ -129,10 +138,35 @@ function AddMenu() {
         }
     };
 
+    const handleEdit = (menu) => {
+        setEditingId(menu._id);
+        setDishName(menu.dishName);
+        setDishIngredients(menu.dishIngredients.join(", "));
+        setPrice(menu.price || "");
+        setCategory(menu.category);
+        setIsVeg(menu.isVeg);
+        setAllergens(menu.allergens ? menu.allergens.join(", ") : "");
+        setImages(null);
+        setPreviewUrl(menu.images && menu.images.length > 0 ? menu.images[0] : null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setDishName("");
+        setDishIngredients("");
+        setPrice("");
+        setCategory("");
+        setIsVeg(true);
+        setAllergens("");
+        setImages(null);
+        setPreviewUrl(null);
+    };
+
     return (
         <div className="addmenu-page">
             <div className="addmenu-container">
-                <h2 className="addmenu-title">Add Menu</h2>
+                <h2 className="addmenu-title">{editingId ? "Edit Menu" : "Add Menu"}</h2>
 
                 <form className="addmenu-form" onSubmit={handleSubmit}>
                     <input
@@ -179,7 +213,7 @@ function AddMenu() {
                     
                     <input
                         type="number"
-                        placeholder="Price (optional)"
+                        placeholder="Price in ₹ (optional)"
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
                     />
@@ -199,16 +233,23 @@ function AddMenu() {
                         />
                     )}
 
-                    <button type="submit" className="add-btn" disabled={loading}>
-                        {loading ? "Adding..." : "Add Menu"}
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {editingId && (
+                            <button type="button" className="add-btn" style={{ background: '#6b7280' }} onClick={cancelEdit}>
+                                Cancel
+                            </button>
+                        )}
+                        <button type="submit" className="add-btn" disabled={loading} style={{ flex: 1 }}>
+                            {loading ? "Saving..." : (editingId ? "Update Menu" : "Add Menu")}
+                        </button>
+                    </div>
                 </form>
 
                 <div className="section-divider"></div>
 
                 <div className="menu-header">
                     <h3 className="text-light">
-                        {menus.length === 0 ? "No Menus" : "Available Menus"}
+                        {allMenus.length === 0 ? "No Menus" : "Available Menus"}
                     </h3>
 
                     <input
@@ -230,7 +271,7 @@ function AddMenu() {
                 </div>
 
                 <div className="menu-grid">
-                    {menus.map((menu) => (
+                    {allMenus.slice((page - 1) * limit, page * limit).map((menu) => (
                         <div key={menu._id} className="menu-card">
                             <input
                                 type="checkbox"
@@ -247,8 +288,18 @@ function AddMenu() {
 
                             <h3>{menu.dishName}</h3>
                             <p className="menu-category">{menu.category}</p>
-                            <p className="menu-veg">{menu.isVeg ? "🟢 Veg" : "🔴 Non-Veg"}</p>
-                            {menu.price && <p className="menu-price">₹{menu.price}</p>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <p className="menu-veg">{menu.isVeg ? "🟢 Veg" : "🔴 Non-Veg"}</p>
+                                {menu.price && <p className="menu-price">₹{menu.price}</p>}
+                            </div>
+                            <button
+                                type="button"
+                                className="add-btn"
+                                style={{ marginTop: 'auto', padding: '8px', fontSize: '14px', height: 'auto' }}
+                                onClick={() => handleEdit(menu)}
+                            >
+                                Edit
+                            </button>
                         </div>
                     ))}
                 </div>

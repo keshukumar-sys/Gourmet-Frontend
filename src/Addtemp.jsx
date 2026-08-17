@@ -12,6 +12,7 @@ export default function Addtemp() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const [templateName, setTemplateName] = useState("");
   const [templateImage, setTemplateImage] = useState(null);
@@ -52,7 +53,7 @@ export default function Addtemp() {
       toast.error("Give the template a name.");
       return;
     }
-    if (!templateImage) {
+    if (!editingId && !templateImage) {
       toast.error("Choose a preview image.");
       return;
     }
@@ -62,20 +63,27 @@ export default function Addtemp() {
       const formData = new FormData();
       formData.append("templateName", templateName.trim());
       formData.append("defaultTextColor", defaultTextColor);
-      // The backend's multer field is `image` (upload.single("image"))
-      formData.append("image", templateImage);
+      if (templateImage) {
+        formData.append("image", templateImage);
+      }
 
-      const res = await api.post("/templates", formData);
+      let res;
+      if (editingId) {
+        res = await api.put(`/templates/${editingId}`, formData);
+      } else {
+        res = await api.post("/templates", formData);
+      }
 
       if (res.data.success) {
-        toast.success("Template added.");
+        toast.success(editingId ? "Template updated." : "Template added.");
         setTemplateName("");
         setTemplateImage(null);
         setPreviewUrl(null);
+        setEditingId(null);
         loadTemplates();
       }
     } catch (err) {
-      toast.error(errorMessage(err, "Could not add the template"));
+      toast.error(errorMessage(err, editingId ? "Could not update the template" : "Could not add the template"));
     } finally {
       setSaving(false);
     }
@@ -96,6 +104,23 @@ export default function Addtemp() {
     }
   };
 
+  const handleEdit = (tpl) => {
+    setEditingId(tpl._id);
+    setTemplateName(tpl.templateName);
+    setDefaultTextColor(tpl.defaultTextColor);
+    setTemplateImage(null);
+    setPreviewUrl(tpl.previewImage ? imageUrl(tpl.previewImage) : null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setTemplateName("");
+    setDefaultTextColor("#d4af37");
+    setTemplateImage(null);
+    setPreviewUrl(null);
+  };
+
   return (
     <div className="sc-page">
       <div className="sc-shell sc-fade-in">
@@ -105,7 +130,7 @@ export default function Addtemp() {
         </div>
 
         <section className="sc-card">
-          <h2 className="sc-section-title">Add a template</h2>
+          <h2 className="sc-section-title">{editingId ? "Edit template" : "Add a template"}</h2>
 
           <form onSubmit={handleSubmit}>
             <div className="sc-grid">
@@ -147,15 +172,25 @@ export default function Addtemp() {
             </div>
 
             <div className="sc-actions">
-              <button
-                type="button"
-                className="sc-btn sc-btn--ghost"
-                onClick={() => navigate("/allEvents")}
-              >
-                ← Back
-              </button>
+              {editingId ? (
+                <button
+                  type="button"
+                  className="sc-btn sc-btn--ghost"
+                  onClick={cancelEdit}
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sc-btn sc-btn--ghost"
+                  onClick={() => navigate("/allEvents")}
+                >
+                  ← Back
+                </button>
+              )}
               <button type="submit" className="sc-btn" disabled={saving}>
-                {saving ? "Uploading…" : "Add template"}
+                {saving ? "Saving…" : editingId ? "Update template" : "Add template"}
               </button>
             </div>
           </form>
@@ -178,13 +213,23 @@ export default function Addtemp() {
                     <span className="tpl-swatch" style={{ background: tpl.defaultTextColor }} />
                     <span className="sc-hint">{tpl.defaultTextColor}</span>
                   </div>
-                  <button
-                    className="sc-btn sc-btn--danger sc-btn--sm"
-                    onClick={() => handleDelete(tpl)}
-                    disabled={deletingId === tpl._id}
-                  >
-                    {deletingId === tpl._id ? "Deleting…" : "Delete"}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button
+                      className="sc-btn sc-btn--ghost sc-btn--sm"
+                      style={{ flex: 1 }}
+                      onClick={() => handleEdit(tpl)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="sc-btn sc-btn--danger sc-btn--sm"
+                      style={{ flex: 1 }}
+                      onClick={() => handleDelete(tpl)}
+                      disabled={deletingId === tpl._id}
+                    >
+                      {deletingId === tpl._id ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

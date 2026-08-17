@@ -48,7 +48,8 @@
 .tpl-list__item img {
   width: 100%;
   aspect-ratio: 3 / 4;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--sc-surface);
   border-radius: var(--sc-radius-sm);
   border: 1px solid var(--sc-border);
 }
