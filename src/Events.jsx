@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api, { errorMessage } from "./api";
 import { useToast } from "./Toast";
 import EventDetailsModal from "./EventDetailsModal";
-import { toRow, sortByRelevance, STATUS_LABELS } from "./eventShape";
+import { toRow, sortByRelevance, STATUS_LABELS, STATUS_TONE } from "./eventShape";
 import { formatDate } from "./format";
 import "./Events.css";
 
@@ -15,6 +15,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [detailsFor, setDetailsFor] = useState(null);
+  const [reviewingId, setReviewingId] = useState(null);
 
   const clearFlow = () => {
     ["bookingData", "selectedMenus", "menuNotes", "templateSettings",
@@ -63,6 +64,39 @@ export default function Events() {
     navigate("/booking");
   };
 
+  /**
+   * Once the admin has signed a proposal off, the rep records what the client
+   * came back with. Before that the buttons are not offered at all.
+   */
+  const handleClientReview = async (row, decision) => {
+    let note = "";
+
+    if (decision === "reject") {
+      const reason = window.prompt(`What did the client say about "${row.eventname}"? (optional)`, "");
+      if (reason === null) return; // cancelled
+      note = reason;
+    }
+
+    setReviewingId(row._id);
+    try {
+      const res = await api.put(`/events/${row._id}/review/client`, { decision, note });
+
+      if (res.data.success) {
+        const updated = res.data.event;
+        setEvents((prev) => prev.map((e) =>
+          e._id === row._id
+            ? { ...e, status: updated.status, approvals: updated.approvals }
+            : e
+        ));
+        toast.success(decision === "approve" ? "Marked as client approved." : "Marked as client rejected.");
+      }
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not record the decision"));
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
   const resumeEvent = (row) => {
     clearFlow();
     sessionStorage.setItem("editMode", "true");
@@ -82,7 +116,9 @@ export default function Events() {
         <div className="events-head">
           <div>
             <h1>Events</h1>
-            <p>{events.length} event{events.length === 1 ? "" : "s"} in the pipeline</p>
+            <p>
+              {events.length} event{events.length === 1 ? "" : "s"} you have created
+            </p>
           </div>
 
           <button className="sc-btn sc-btn--accent" onClick={startNewEvent}>
@@ -140,13 +176,34 @@ export default function Events() {
                       <dd>{row.startTime || "—"}{row.endTime ? ` – ${row.endTime}` : ""}</dd>
                     </div>
                     <div><dt>Mobile</dt><dd>{row.mobnumber || "—"}</dd></div>
-                    <div><dt>Manager</dt><dd>{row.manager || "—"}</dd></div>
+                    <div><dt>Created by</dt><dd>{row.createdBy || "—"}</dd></div>
                   </dl>
 
                   <footer className="event-card__actions">
-                    <span className="sc-badge">{STATUS_LABELS[row.status] || row.status}</span>
+                    <span className={`sc-badge ${STATUS_TONE[row.status] || ""}`}>
+                      {STATUS_LABELS[row.status] || row.status}
+                    </span>
 
                     <div className="event-card__buttons">
+                      {row.approvals?.admin?.decision === "approved" && (
+                        <>
+                          <button
+                            className="sc-btn sc-btn--sm"
+                            onClick={() => handleClientReview(row, "approve")}
+                            disabled={reviewingId === row._id || row.approvals?.client?.decision === "approved"}
+                          >
+                            Client approved
+                          </button>
+                          <button
+                            className="sc-btn sc-btn--danger sc-btn--sm"
+                            onClick={() => handleClientReview(row, "reject")}
+                            disabled={reviewingId === row._id || row.approvals?.client?.decision === "rejected"}
+                          >
+                            Client rejected
+                          </button>
+                        </>
+                      )}
+
                       <button className="sc-btn sc-btn--ghost sc-btn--sm" onClick={() => setDetailsFor(row)}>
                         Details
                       </button>

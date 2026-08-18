@@ -7,6 +7,17 @@ import { formatCurrency, formatDate } from "./format";
 import "./Proposal.css";
 
 const emptyCommercial = () => ({ item: "", qty: 1, cost: "" });
+
+// Offered as suggestions — the field stays free text so anything can be typed.
+const SERVICE_STYLES = [
+  "Buffet system",
+  "Plated / sit-down service",
+  "Family style",
+  "Live counters",
+  "Passed canapés",
+  "Food stations",
+  "Cocktail reception"
+];
 const emptyExtra = () => ({ name: "", description: "", price: "" });
 
 export default function Proposal() {
@@ -20,6 +31,9 @@ export default function Proposal() {
 
   const [overview, setOverview] = useState("");
   const [commercials, setCommercials] = useState([emptyCommercial()]);
+  const [serviceStyle, setServiceStyle] = useState("");
+  const [serviceInclusions, setServiceInclusions] = useState("");
+  const [specialPrice, setSpecialPrice] = useState("");
   const [chargeableExtras, setChargeableExtras] = useState([emptyExtra()]);
   const [paymentTerms, setPaymentTerms] = useState(
     "50% advance to confirm the booking, 50% on the day of the event."
@@ -46,6 +60,9 @@ export default function Proposal() {
           // Re-opening an existing proposal: keep what was written before.
           setOverview(saved.overview || "");
           setCommercials(saved.commercials?.length ? saved.commercials : [emptyCommercial()]);
+          setServiceStyle(saved.service_style || "");
+          setServiceInclusions(saved.service_inclusions || "");
+          setSpecialPrice(saved.special_price ? String(saved.special_price) : "");
           setChargeableExtras(saved.chargeable_extras?.length ? saved.chargeable_extras : [emptyExtra()]);
           setPaymentTerms(saved.payment_terms || "");
           setTaxPercent(saved.tax_percent || 0);
@@ -84,10 +101,16 @@ export default function Proposal() {
       (sum, e) => sum + (Number(e.price) || 0),
       0
     );
-    const subtotal = commercialsTotal + extrasTotal;
+    const listSubtotal = commercialsTotal + extrasTotal;
+
+    // A special price, once entered, is the figure the client actually pays;
+    // the list total stays visible so the concession is explicit.
+    const special = Number(specialPrice) || 0;
+    const subtotal = special > 0 ? special : listSubtotal;
+
     const tax = subtotal * (Number(taxPercent) || 0) / 100;
-    return { subtotal, tax, total: subtotal + tax };
-  }, [commercials, chargeableExtras, taxPercent]);
+    return { listSubtotal, subtotal, tax, total: subtotal + tax };
+  }, [commercials, chargeableExtras, taxPercent, specialPrice]);
 
   const updateRow = (setter, index, field, value) => {
     setter((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
@@ -122,6 +145,9 @@ export default function Proposal() {
           qty: Number(c.qty) || 1,
           cost: Number(c.cost) || 0
         })),
+        service_style: serviceStyle,
+        service_inclusions: serviceInclusions,
+        special_price: Number(specialPrice) || 0,
         payment_terms: paymentTerms,
         chargeable_extras: chargeableExtras
           .filter((e) => e.name?.trim())
@@ -293,6 +319,56 @@ export default function Proposal() {
           >
             + Add line item
           </button>
+
+          <div className="prop-commercial-extras">
+            <div className="sc-grid">
+              <div className="sc-field">
+                <label htmlFor="service-style">Service style</label>
+                <input
+                  id="service-style"
+                  type="text"
+                  list="service-style-options"
+                  value={serviceStyle}
+                  placeholder="e.g. Buffet system"
+                  onChange={(e) => setServiceStyle(e.target.value)}
+                />
+                <datalist id="service-style-options">
+                  {SERVICE_STYLES.map((style) => (
+                    <option key={style} value={style} />
+                  ))}
+                </datalist>
+                <span className="sc-hint">Pick a common style or type your own.</span>
+              </div>
+
+              <div className="sc-field">
+                <label htmlFor="special-price">Special price</label>
+                <input
+                  id="special-price"
+                  type="number"
+                  min="0"
+                  value={specialPrice}
+                  placeholder="0"
+                  onChange={(e) => setSpecialPrice(e.target.value)}
+                />
+                <span className="sc-hint">
+                  {Number(specialPrice) > 0
+                    ? `Replaces the ${formatCurrency(totals.listSubtotal)} list price.`
+                    : "Optional — the agreed figure, if it differs from the line items."}
+                </span>
+              </div>
+            </div>
+
+            <div className="sc-field">
+              <label htmlFor="service-inclusions">Service inclusions</label>
+              <textarea
+                id="service-inclusions"
+                rows="3"
+                value={serviceInclusions}
+                onChange={(e) => setServiceInclusions(e.target.value)}
+                placeholder="What the service covers — staff hours, setup, clearing, crockery…"
+              />
+            </div>
+          </div>
         </section>
 
         {/* Chargeable extras */}
@@ -408,8 +484,15 @@ export default function Proposal() {
             <aside className="prop-total" aria-live="polite">
               <h3>Running total</h3>
 
+              {Number(specialPrice) > 0 && (
+                <div className="prop-total__row prop-total__row--muted">
+                  <span>List price</span>
+                  <strong>{formatCurrency(totals.listSubtotal)}</strong>
+                </div>
+              )}
+
               <div className="prop-total__row">
-                <span>Subtotal</span>
+                <span>{Number(specialPrice) > 0 ? "Special price" : "Subtotal"}</span>
                 <strong>{formatCurrency(totals.subtotal)}</strong>
               </div>
 

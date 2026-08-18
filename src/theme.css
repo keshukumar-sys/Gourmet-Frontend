@@ -344,6 +344,7 @@ body {
 .sc-badge--success { color: #9fe3bf; border-color: rgba(52, 168, 106, 0.5); background: rgba(52, 168, 106, 0.15); }
 .sc-badge--warning { color: #f2d29a; border-color: rgba(224, 166, 60, 0.5);  background: rgba(224, 166, 60, 0.15); }
 .sc-badge--accent  { color: var(--sc-navy-deep); background: var(--sc-blush); border-color: var(--sc-blush); }
+.sc-badge--danger  { color: #f5b0ab; border-color: rgba(217, 83, 79, 0.5);   background: rgba(217, 83, 79, 0.15); }
 
 /* --- States -------------------------------------------------------------- */
 .sc-empty,

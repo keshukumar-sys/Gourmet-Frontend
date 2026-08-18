@@ -6,7 +6,9 @@ import api, { errorMessage, isAdmin, imageUrl } from "./api";
 import { useToast } from "./Toast";
 import Stepper from "./Stepper";
 import { formatCurrency, formatDate } from "./format";
+import { collectEntryImages } from "./EntryFields";
 import "./Summary.css";
+import "./EntryFields.css";
 
 export default function Summary() {
   const location = useLocation();
@@ -15,6 +17,7 @@ export default function Summary() {
   const cardRef = useRef(null);
 
   const [event, setEvent] = useState(null);
+  const [estimate, setEstimate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -31,9 +34,12 @@ export default function Summary() {
 
     const load = async () => {
       try {
-        // GET /summary also marks step 7 as reached on the server
+        // GET /summary also marks step 6 as reached on the server
         const res = await api.get(`/events/${eventId}/summary`);
-        if (!cancelled && res.data.success) setEvent(res.data.event);
+        if (!cancelled && res.data.success) {
+          setEvent(res.data.event);
+          setEstimate(res.data.estimate || null);
+        }
       } catch (err) {
         if (!cancelled) toast.error(errorMessage(err, "Could not load the summary"));
       } finally {
@@ -120,10 +126,22 @@ export default function Summary() {
   }
 
   const details = event.details || {};
+  const operations = event.operations || {};
+  const decor = event.decor || {};
   const menusByCategory = groupMenus(event.menu_selection?.menus);
-  const opsImages = (event.images || []).filter((i) => i.section === "operations");
-  const decorImages = (event.images || []).filter((i) => i.section === "decor");
   const template = event.menu_template?.template_id;
+  const creator = event.created_by?.name || event.user_id?.name || "—";
+
+  // Uploads captured before the sections became repeatable still live in the
+  // flat list, so fold both sources together when showing a gallery.
+  const legacyOps = (event.images || [])
+    .filter((i) => i.section === "operations")
+    .map((i) => i.original_url);
+  const legacyDecor = (event.images || [])
+    .filter((i) => i.section === "decor")
+    .map((i) => i.original_url);
+
+  const estimatedTotal = estimate?.total ?? decor.estimated_price ?? 0;
 
   return (
     <div className="sc-page">
@@ -148,7 +166,7 @@ export default function Summary() {
               <Fact label="End time" value={details.end_time} />
               <Fact label="Guests" value={details.guest_count} />
               <Fact label="Venue / requirements" value={details.venue} />
-              <Fact label="Created by" value={event.user_id?.name} />
+              <Fact label="Created by" value={creator} />
             </dl>
           </section>
 
@@ -183,6 +201,94 @@ export default function Summary() {
             )}
           </section>
 
+          <section className="sc-card">
+            <h2 className="sc-section-title">Operations</h2>
+
+            {operations.crew_list?.length > 0 ? (
+              <>
+                <h3 className="summary-subhead">Crew</h3>
+                <div className="sc-table-wrap">
+                  <table className="sc-table">
+                    <thead>
+                      <tr><th>Role</th><th>Name</th><th>Contact</th><th>Notes</th></tr>
+                    </thead>
+                    <tbody>
+                      {operations.crew_list.map((crew, i) => (
+                        <tr key={i}>
+                          <td>{crew.role || "—"}</td>
+                          <td>{crew.name || "—"}</td>
+                          <td>{crew.contact || "—"}</td>
+                          <td>{crew.notes || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Gallery images={collectEntryImages(operations.crew_list)} alt="Crew reference" />
+              </>
+            ) : (
+              <p className="sc-hint">No crew assigned yet.</p>
+            )}
+
+            <EntryList
+              title="Locations"
+              entries={operations.locations}
+              labelOf={(row) => row.name}
+            />
+
+            <EntryList
+              title="Crockery & cutlery"
+              entries={operations.crockery}
+              labelOf={(row) => row.name}
+            />
+
+            {operations.notes_references?.length > 0 && (
+              <>
+                <h3 className="summary-subhead">Notes &amp; references</h3>
+                {operations.notes_references.map((row, i) => (
+                  <div key={i} className="summary-entry">
+                    {row.note && <p className="summary-notes">{row.note}</p>}
+                    {row.reference && <p className="sc-hint">Reference: {row.reference}</p>}
+                    <Gallery images={row.images} alt="Reference" />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {operations.notes && <p className="summary-notes">{operations.notes}</p>}
+
+            <Gallery images={legacyOps} alt="Operations reference" />
+          </section>
+
+          <section className="sc-card">
+            <h2 className="sc-section-title">Decor</h2>
+
+            <EntryList
+              title="Decor locations"
+              entries={decor.locations}
+              labelOf={(row) => row.name}
+              showPrice
+            />
+
+            <EntryList
+              title="Flowers & elements"
+              entries={decor.elements}
+              labelOf={(row) => row.name}
+              showPrice
+            />
+
+            <p className="summary-price">{formatCurrency(decor.estimated_price)}</p>
+
+            {decor.additional_info && (
+              <>
+                <h3 className="summary-subhead">Additional information</h3>
+                <p className="summary-notes">{decor.additional_info}</p>
+              </>
+            )}
+
+            <Gallery images={legacyDecor} alt="Decor reference" />
+          </section>
+
           {template && (
             <section className="sc-card">
               <h2 className="sc-section-title">Menu card template</h2>
@@ -198,54 +304,13 @@ export default function Summary() {
             </section>
           )}
 
-          <section className="sc-card">
-            <h2 className="sc-section-title">Operations</h2>
-
-            {event.operations?.crew_list?.length > 0 ? (
-              <div className="sc-table-wrap">
-                <table className="sc-table">
-                  <thead>
-                    <tr><th>Role</th><th>Name</th><th>Contact</th></tr>
-                  </thead>
-                  <tbody>
-                    {event.operations.crew_list.map((crew, i) => (
-                      <tr key={i}>
-                        <td>{crew.role || "—"}</td>
-                        <td>{crew.name || "—"}</td>
-                        <td>{crew.contact || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="sc-hint">No crew assigned yet.</p>
-            )}
-
-            {event.operations?.notes && (
-              <p className="summary-notes">{event.operations.notes}</p>
-            )}
-
-            {opsImages.length > 0 && (
-              <div className="summary-gallery">
-                {opsImages.map((img, i) => (
-                  <img key={i} src={imageUrl(img.original_url)} alt="Operations reference" />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="sc-card">
-            <h2 className="sc-section-title">Decor</h2>
-            <p className="summary-price">{formatCurrency(event.decor?.estimated_price)}</p>
-
-            {decorImages.length > 0 && (
-              <div className="summary-gallery">
-                {decorImages.map((img, i) => (
-                  <img key={i} src={imageUrl(img.original_url)} alt="Decor reference" />
-                ))}
-              </div>
-            )}
+          {/* The headline figure closes the summary */}
+          <section className="estimate-box">
+            <p className="estimate-box__label">Estimated Price</p>
+            <p className="estimate-box__value">{formatCurrency(estimatedTotal)}</p>
+            <p className="estimate-box__note">
+              *This Pricing is an average cost for decor and operations only.
+            </p>
           </section>
 
         </div>
@@ -253,7 +318,7 @@ export default function Summary() {
         <div className="sc-actions">
           <button
             className="sc-btn sc-btn--ghost"
-            onClick={() => navigate("/decor", { state: { ...location.state, eventId } })}
+            onClick={() => navigate("/templateSelection", { state: { ...location.state, eventId } })}
             disabled={submitting}
           >
             ← Back
@@ -287,6 +352,42 @@ function Fact({ label, value }) {
     <div className="sc-datalist__item">
       <dt>{label}</dt>
       <dd>{value === 0 || value ? value : "—"}</dd>
+    </div>
+  );
+}
+
+/** Render one of the repeatable operations/decor lists, images and all. */
+function EntryList({ title, entries, labelOf, showPrice = false }) {
+  if (!entries?.length) return null;
+
+  return (
+    <>
+      <h3 className="summary-subhead">{title}</h3>
+
+      {entries.map((row, i) => (
+        <div key={i} className="summary-entry">
+          <p className="summary-entry__name">
+            {labelOf(row) || "Untitled"}
+            {showPrice && Number(row.price) > 0 && (
+              <span className="summary-entry__price">{formatCurrency(row.price)}</span>
+            )}
+          </p>
+          {row.notes && <p className="summary-notes">{row.notes}</p>}
+          <Gallery images={row.images} alt={title} />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function Gallery({ images, alt }) {
+  if (!images?.length) return null;
+
+  return (
+    <div className="summary-gallery">
+      {images.map((url, i) => (
+        <img key={`${url}-${i}`} src={imageUrl(url)} alt={alt} />
+      ))}
     </div>
   );
 }

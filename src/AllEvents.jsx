@@ -3,7 +3,7 @@ import { useNavigate, NavLink } from "react-router-dom";
 import api, { errorMessage } from "./api";
 import { useToast } from "./Toast";
 import EventDetailsModal from "./EventDetailsModal";
-import { toRow, sortByRelevance, STATUS_LABELS } from "./eventShape";
+import { toRow, sortByRelevance, STATUS_LABELS, STATUS_TONE } from "./eventShape";
 import { formatCurrency, formatDate } from "./format";
 import "./Events.css";
 import "./AllEvents.css";
@@ -12,7 +12,8 @@ const FILTERS = [
   { id: "all", label: "All" },
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Completed" },
-  { id: "proposed", label: "With proposal" }
+  { id: "proposed", label: "With proposal" },
+  { id: "pending", label: "Awaiting approval" }
 ];
 
 export default function AllEvents() {
@@ -25,6 +26,7 @@ export default function AllEvents() {
   const [filter, setFilter] = useState("all");
   const [detailsFor, setDetailsFor] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [reviewingId, setReviewingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,13 +55,44 @@ export default function AllEvents() {
       if (filter === "upcoming" && time < now) return false;
       if (filter === "past" && time >= now) return false;
       if (filter === "proposed" && !(e.proposal?.total > 0)) return false;
+      if (filter === "pending" && e.status !== "pending_admin") return false;
 
       if (!term) return true;
-      return [e.eventname, e.username, e.mobnumber, e.email, e.manager]
+      return [e.eventname, e.username, e.mobnumber, e.email, e.manager, e.createdBy, e.createdByEmail]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(term));
     });
   }, [events, search, filter]);
+
+  /** Admin sign-off, straight from the list — no need to open the document. */
+  const handleReview = async (row, decision) => {
+    let note = "";
+
+    if (decision === "reject") {
+      const reason = window.prompt(`Why is "${row.eventname}" being rejected? (optional)`, "");
+      if (reason === null) return; // cancelled
+      note = reason;
+    }
+
+    setReviewingId(row._id);
+    try {
+      const res = await api.put(`/events/${row._id}/review/admin`, { decision, note });
+
+      if (res.data.success) {
+        const updated = res.data.event;
+        setEvents((prev) => prev.map((e) =>
+          e._id === row._id
+            ? { ...e, status: updated.status, approvals: updated.approvals }
+            : e
+        ));
+        toast.success(decision === "approve" ? "Proposal approved." : "Proposal rejected.");
+      }
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not record the decision"));
+    } finally {
+      setReviewingId(null);
+    }
+  };
 
   const handleDelete = async (row) => {
     if (!window.confirm(`Permanently delete "${row.eventname}"? This cannot be undone.`)) return;
@@ -101,7 +134,7 @@ export default function AllEvents() {
             <input
               id="ae-search"
               type="search"
-              placeholder="Search by event, client, phone, email or manager…"
+              placeholder="Search by event, client, phone, email or creator…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -151,7 +184,7 @@ export default function AllEvents() {
                     <div><dt>Date</dt><dd>{formatDate(row.eventdate)}</dd></div>
                     <div><dt>Guests</dt><dd>{row.guest}</dd></div>
                     <div><dt>Mobile</dt><dd>{row.mobnumber || "—"}</dd></div>
-                    <div><dt>Manager</dt><dd>{row.manager || "—"}</dd></div>
+                    <div><dt>Created by</dt><dd>{row.createdBy || "—"}</dd></div>
                     <div>
                       <dt>Proposal</dt>
                       <dd>{hasProposal ? formatCurrency(row.proposal.total) : "Not created"}</dd>
@@ -159,9 +192,30 @@ export default function AllEvents() {
                   </dl>
 
                   <footer className="event-card__actions">
-                    <span className="sc-badge">{STATUS_LABELS[row.status] || row.status}</span>
+                    <span className={`sc-badge ${STATUS_TONE[row.status] || ""}`}>
+                      {STATUS_LABELS[row.status] || row.status}
+                    </span>
 
                     <div className="event-card__buttons">
+                      {hasProposal && (
+                        <>
+                          <button
+                            className="sc-btn sc-btn--sm"
+                            onClick={() => handleReview(row, "approve")}
+                            disabled={reviewingId === row._id || row.approvals?.admin?.decision === "approved"}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="sc-btn sc-btn--danger sc-btn--sm"
+                            onClick={() => handleReview(row, "reject")}
+                            disabled={reviewingId === row._id || row.approvals?.admin?.decision === "rejected"}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+
                       <button className="sc-btn sc-btn--ghost sc-btn--sm" onClick={() => setDetailsFor(row)}>
                         Details
                       </button>

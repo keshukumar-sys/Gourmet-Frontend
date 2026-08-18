@@ -11,9 +11,9 @@ import "./Stepper.css";
 export const FLOW_STEPS = [
   { id: 1, label: "Details", path: "/booking" },
   { id: 2, label: "Menu", path: "/menuSelection" },
-  { id: 3, label: "Template", path: "/templateSelection" },
-  { id: 4, label: "Operations", path: "/operations" },
-  { id: 5, label: "Decor", path: "/decor" },
+  { id: 3, label: "Operations", path: "/operations" },
+  { id: 4, label: "Decor", path: "/decor" },
+  { id: 5, label: "Template", path: "/templateSelection" },
   { id: 6, label: "Summary", path: "/summary" },
   { id: 7, label: "Proposal", path: "/proposal" }
 ];

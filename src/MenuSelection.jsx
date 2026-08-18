@@ -176,7 +176,7 @@ export default function MenuSelection() {
         }))
       });
 
-      navigate("/templateSelection", {
+      navigate("/operations", {
         state: { ...location.state, eventId, editMode: location.state?.editMode || false }
       });
     } catch (err) {

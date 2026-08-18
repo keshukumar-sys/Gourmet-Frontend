@@ -33,6 +33,13 @@ export function toRow(event) {
     endTime: details.end_time || "",
     venue: details.venue || "",
     manager: event.user_id?.name || "",
+
+    // Who built this event, and on which account
+    createdBy: event.created_by?.name || event.user_id?.name || "",
+    createdByEmail: event.created_by?.email || event.user_id?.email || "",
+    createdById: event.user_id?._id || event.user_id || "",
+
+    approvals: event.approvals || {},
     selectedMenu,
     menuNotes,
     beverageNotes: event.menu_selection?.beverage_notes || "",
@@ -65,7 +72,20 @@ export function sortByRelevance(rows) {
 export const STATUS_LABELS = {
   draft: "Draft",
   pending_admin: "Pending approval",
-  approved_by_admin: "Approved",
+  approved_by_admin: "Approved by admin",
+  rejected_by_admin: "Rejected by admin",
   sent_to_client: "Sent to client",
-  approved_by_client: "Client approved"
+  approved_by_client: "Client approved",
+  rejected_by_client: "Client rejected"
+};
+
+/** Colour cue for the status badge, matching the sc-badge modifiers. */
+export const STATUS_TONE = {
+  draft: "",
+  pending_admin: "sc-badge--warning",
+  approved_by_admin: "sc-badge--success",
+  rejected_by_admin: "sc-badge--danger",
+  sent_to_client: "sc-badge--warning",
+  approved_by_client: "sc-badge--success",
+  rejected_by_client: "sc-badge--danger"
 };

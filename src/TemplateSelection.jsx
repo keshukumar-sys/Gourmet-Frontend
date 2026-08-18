@@ -133,7 +133,7 @@ export default function TemplateSelection() {
     setLoading(true);
     try {
       await saveTemplate();
-      navigate("/operations", { state: { ...location.state, eventId } });
+      navigate("/summary", { state: { ...location.state, eventId } });
     } catch (err) {
       toast.error(errorMessage(err, "Could not save the template"));
       setLoading(false);
@@ -160,7 +160,7 @@ export default function TemplateSelection() {
   if (fetching) {
     return (
       <div className="sc-page">
-        <Stepper current={3} eventId={eventId} />
+        <Stepper current={5} eventId={eventId} />
         <div className="sc-shell">
           <div className="sc-loading">
             <div className="sc-spinner" />
@@ -175,7 +175,7 @@ export default function TemplateSelection() {
 
   return (
     <div className="sc-page">
-      <Stepper current={3} eventId={eventId} />
+      <Stepper current={5} eventId={eventId} />
 
       <div className="sc-shell sc-shell--wide sc-fade-in">
         <div className="sc-page-head">
@@ -342,7 +342,7 @@ export default function TemplateSelection() {
         <div className="sc-actions">
           <button
             className="sc-btn sc-btn--ghost"
-            onClick={() => navigate("/menuSelection", { state: { ...location.state, eventId } })}
+            onClick={() => navigate("/decor", { state: { ...location.state, eventId } })}
             disabled={loading}
           >
             ← Back
@@ -355,7 +355,7 @@ export default function TemplateSelection() {
               </button>
             )}
             <button className="sc-btn" onClick={handleNext} disabled={loading}>
-              {loading ? "Saving…" : "Next: Operations →"}
+              {loading ? "Saving…" : "Next: Summary →"}
             </button>
           </div>
         </div>

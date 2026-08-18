@@ -3,17 +3,36 @@ import { useNavigate, useLocation } from "react-router-dom";
 import api, { errorMessage } from "./api";
 import { useToast } from "./Toast";
 import Stepper from "./Stepper";
+import {
+  useEntryList,
+  EntryImages,
+  EntryCard,
+  AddEntryButton
+} from "./EntryFields";
 
-const emptyCrew = () => ({ role: "", name: "", contact: "" });
+const emptyCrew = () => ({ role: "", name: "", contact: "", notes: "", images: [] });
+const emptyLocation = () => ({ name: "", notes: "", images: [] });
+const emptyCrockery = () => ({ name: "", notes: "", images: [] });
+const emptyNote = () => ({ note: "", reference: "", images: [] });
 
+/**
+ * Step 3 of the flow.
+ *
+ * Each of the four sections is a list the user can grow, because a real event
+ * has several crew members, several rooms and several sets of crockery — and
+ * each of those needs its own photographs and notes rather than one shared
+ * pile at the bottom of the page.
+ */
 export default function Operations() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
 
-  const [crewList, setCrewList] = useState([emptyCrew()]);
-  const [notes, setNotes] = useState("");
-  const [images, setImages] = useState([]);
+  const crew = useEntryList(emptyCrew);
+  const locations = useEntryList(emptyLocation);
+  const crockery = useEntryList(emptyCrockery);
+  const notesRefs = useEntryList(emptyNote);
+
   const [loading, setLoading] = useState(false);
 
   const eventId = location.state?.eventId || sessionStorage.getItem("currentEventId");
@@ -29,43 +48,36 @@ export default function Operations() {
     api.get(`/events/${eventId}`)
       .then((res) => {
         if (cancelled || !res.data.success) return;
+
         const ops = res.data.event.operations || {};
-        if (ops.crew_list?.length) setCrewList(ops.crew_list);
-        if (ops.notes) setNotes(ops.notes);
+        crew.load(ops.crew_list);
+        locations.load(ops.locations);
+        crockery.load(ops.crockery);
+
+        // Events saved before this step had repeatable notes carry a single
+        // free-text field — surface it as the first reference entry.
+        if (ops.notes_references?.length) {
+          notesRefs.load(ops.notes_references);
+        } else if (ops.notes) {
+          notesRefs.load([{ note: ops.notes, reference: "", images: [] }]);
+        }
       })
       .catch(() => { /* first visit — nothing saved yet */ });
 
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, navigate]);
-
-  const handleCrewChange = (index, field, value) => {
-    setCrewList((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
-  };
-
-  const removeCrewMember = (index) => {
-    setCrewList((rows) => {
-      const next = rows.filter((_, i) => i !== index);
-      return next.length ? next : [emptyCrew()];
-    });
-  };
 
   const handleNext = async () => {
     setLoading(true);
 
     try {
       await api.put(`/events/${eventId}/operations`, {
-        crew_list: crewList.filter((c) => c.role?.trim() || c.name?.trim()),
-        notes
+        crew_list: crew.entries,
+        locations: locations.entries,
+        crockery: crockery.entries,
+        notes_references: notesRefs.entries
       });
-
-      if (images.length > 0) {
-        const formData = new FormData();
-        formData.append("section", "operations");
-        formData.append("subtype", "location");
-        images.forEach((img) => formData.append("images", img));
-
-        await api.post(`/events/${eventId}/images`, formData);
-      }
 
       navigate("/decor", { state: { ...location.state, eventId } });
     } catch (err) {
@@ -77,98 +89,186 @@ export default function Operations() {
 
   return (
     <div className="sc-page">
-      <Stepper current={4} eventId={eventId} />
+      <Stepper current={3} eventId={eventId} />
 
       <div className="sc-shell sc-fade-in">
         <div className="sc-page-head">
           <h1>Operations</h1>
-          <p>Assign the crew and attach any location references.</p>
+          <p>Crew, locations, tableware and references — add as many entries as the event needs.</p>
         </div>
 
+        {/* 1. Crew list */}
         <section className="sc-card">
           <h2 className="sc-section-title">Crew list</h2>
 
-          {crewList.map((crew, index) => (
-            <div key={index} className="sc-row ops-row">
-              <div className="sc-field">
-                <label>Role</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Event Manager"
-                  value={crew.role}
-                  onChange={(e) => handleCrewChange(index, "role", e.target.value)}
-                />
+          {crew.entries.map((row, i) => (
+            <EntryCard key={i} index={i} title="Crew member" onRemove={() => crew.remove(i)}>
+              <div className="entry-grid-3">
+                <div className="sc-field">
+                  <label>Role</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Event Manager"
+                    value={row.role}
+                    onChange={(e) => crew.update(i, "role", e.target.value)}
+                  />
+                </div>
+
+                <div className="sc-field">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    value={row.name}
+                    onChange={(e) => crew.update(i, "name", e.target.value)}
+                  />
+                </div>
+
+                <div className="sc-field">
+                  <label>Contact</label>
+                  <input
+                    type="text"
+                    placeholder="Phone or email"
+                    value={row.contact}
+                    onChange={(e) => crew.update(i, "contact", e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="sc-field">
-                <label>Name</label>
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={crew.name}
-                  onChange={(e) => handleCrewChange(index, "name", e.target.value)}
-                />
-              </div>
+              <EntryImages
+                eventId={eventId}
+                images={row.images}
+                label="Images"
+                onChange={(images) => crew.update(i, "images", images)}
+              />
 
               <div className="sc-field">
-                <label>Contact</label>
-                <input
-                  type="text"
-                  placeholder="Phone or email"
-                  value={crew.contact}
-                  onChange={(e) => handleCrewChange(index, "contact", e.target.value)}
+                <label>Extra notes</label>
+                <textarea
+                  rows="2"
+                  placeholder="Shift timing, uniform, anything specific to this person…"
+                  value={row.notes}
+                  onChange={(e) => crew.update(i, "notes", e.target.value)}
                 />
               </div>
-
-              <button
-                type="button"
-                className="sc-row__remove"
-                onClick={() => removeCrewMember(index)}
-                aria-label={`Remove crew member ${index + 1}`}
-              >
-                Remove
-              </button>
-            </div>
+            </EntryCard>
           ))}
 
-          <button
-            type="button"
-            className="sc-btn sc-btn--ghost sc-btn--sm"
-            onClick={() => setCrewList((rows) => [...rows, emptyCrew()])}
-          >
-            + Add crew member
-          </button>
+          <AddEntryButton onClick={crew.add}>Add crew member</AddEntryButton>
         </section>
 
+        {/* 2. Locations */}
+        <section className="sc-card">
+          <h2 className="sc-section-title">Locations</h2>
+
+          {locations.entries.map((row, i) => (
+            <EntryCard key={i} index={i} title="Location" onRemove={() => locations.remove(i)}>
+              <div className="sc-field">
+                <label>Location name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Banquet Hall, Poolside Lawn"
+                  value={row.name}
+                  onChange={(e) => locations.update(i, "name", e.target.value)}
+                />
+              </div>
+
+              <EntryImages
+                eventId={eventId}
+                images={row.images}
+                label="Images of location"
+                onChange={(images) => locations.update(i, "images", images)}
+              />
+
+              <div className="sc-field">
+                <label>Notes</label>
+                <textarea
+                  rows="2"
+                  placeholder="Access, power points, load-in route…"
+                  value={row.notes}
+                  onChange={(e) => locations.update(i, "notes", e.target.value)}
+                />
+              </div>
+            </EntryCard>
+          ))}
+
+          <AddEntryButton onClick={locations.add}>Add location</AddEntryButton>
+        </section>
+
+        {/* 3. Crockery and cutlery */}
+        <section className="sc-card">
+          <h2 className="sc-section-title">Crockery &amp; cutlery</h2>
+
+          {crockery.entries.map((row, i) => (
+            <EntryCard key={i} index={i} title="Item" onRemove={() => crockery.remove(i)}>
+              <div className="sc-field">
+                <label>Crockery / cutlery</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Gold-rim dinner plates, 200 pcs"
+                  value={row.name}
+                  onChange={(e) => crockery.update(i, "name", e.target.value)}
+                />
+              </div>
+
+              <EntryImages
+                eventId={eventId}
+                images={row.images}
+                label="Images"
+                onChange={(images) => crockery.update(i, "images", images)}
+              />
+
+              <div className="sc-field">
+                <label>Notes</label>
+                <textarea
+                  rows="2"
+                  placeholder="Supplier, hire cost, breakage policy…"
+                  value={row.notes}
+                  onChange={(e) => crockery.update(i, "notes", e.target.value)}
+                />
+              </div>
+            </EntryCard>
+          ))}
+
+          <AddEntryButton onClick={crockery.add}>Add crockery / cutlery</AddEntryButton>
+        </section>
+
+        {/* 4. Notes and references */}
         <section className="sc-card">
           <h2 className="sc-section-title">Notes &amp; references</h2>
 
-          <div className="sc-field">
-            <label htmlFor="ops-notes">Operation notes</label>
-            <textarea
-              id="ops-notes"
-              rows="4"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Load-in times, access, kitchen setup…"
-            />
-          </div>
+          {notesRefs.entries.map((row, i) => (
+            <EntryCard key={i} index={i} title="Note" onRemove={() => notesRefs.remove(i)}>
+              <div className="sc-field">
+                <label>Note</label>
+                <textarea
+                  rows="3"
+                  placeholder="Load-in times, kitchen setup, service flow…"
+                  value={row.note}
+                  onChange={(e) => notesRefs.update(i, "note", e.target.value)}
+                />
+              </div>
 
-          <div className="sc-field" style={{ marginTop: "var(--sc-gap)" }}>
-            <label htmlFor="ops-images">Location images</label>
-            <input
-              id="ops-images"
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => setImages(Array.from(e.target.files))}
-            />
-            <span className="sc-hint">
-              {images.length > 0
-                ? `${images.length} image${images.length > 1 ? "s" : ""} ready to upload`
-                : "Optional — helps the crew prepare"}
-            </span>
-          </div>
+              <div className="sc-field">
+                <label>Reference</label>
+                <input
+                  type="text"
+                  placeholder="Link, document name or the person who asked for it"
+                  value={row.reference}
+                  onChange={(e) => notesRefs.update(i, "reference", e.target.value)}
+                />
+              </div>
+
+              <EntryImages
+                eventId={eventId}
+                images={row.images}
+                label="Reference images"
+                onChange={(images) => notesRefs.update(i, "images", images)}
+              />
+            </EntryCard>
+          ))}
+
+          <AddEntryButton onClick={notesRefs.add}>Add note</AddEntryButton>
 
           <div className="sc-actions">
             <button className="sc-btn sc-btn--ghost" onClick={() => navigate(-1)} disabled={loading}>

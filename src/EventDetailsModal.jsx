@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { imageUrl } from "./api";
 import { formatCurrency, formatDate } from "./format";
 import { STATUS_LABELS } from "./eventShape";
+import { collectEntryImages } from "./EntryFields";
 import "./EventDetailsModal.css";
 
 /** Read-only detail view, shared by the rep and admin event lists. */
@@ -17,9 +18,25 @@ export default function EventDetailsModal({ row, onClose }) {
     };
   }, [onClose]);
 
-  const opsImages = row.images.filter((i) => i.section === "operations");
-  const decorImages = row.images.filter((i) => i.section === "decor");
+  const ops = row.operations || {};
+  const decor = row.decor || {};
   const menuEntries = Object.entries(row.selectedMenu);
+
+  // Legacy flat uploads plus whatever hangs off the repeatable entries
+  const opsImages = [
+    ...row.images.filter((i) => i.section === "operations").map((i) => i.original_url),
+    ...collectEntryImages(
+      ops.crew_list || [],
+      ops.locations || [],
+      ops.crockery || [],
+      ops.notes_references || []
+    )
+  ];
+
+  const decorImages = [
+    ...row.images.filter((i) => i.section === "decor").map((i) => i.original_url),
+    ...collectEntryImages(decor.locations || [], decor.elements || [])
+  ];
 
   return (
     <div className="ev-modal" role="dialog" aria-modal="true" aria-label="Event details" onClick={onClose}>
@@ -46,9 +63,27 @@ export default function EventDetailsModal({ row, onClose }) {
               <Fact label="Start time" value={row.startTime} />
               <Fact label="End time" value={row.endTime} />
               <Fact label="Venue" value={row.venue} />
-              <Fact label="Manager" value={row.manager} />
+              <Fact label="Created by" value={row.createdBy} />
+              <Fact label="Creator email" value={row.createdByEmail} />
             </dl>
           </section>
+
+          {(row.approvals?.admin?.decision || row.approvals?.client?.decision) && (
+            <section>
+              <h3 className="sc-section-title">Approvals</h3>
+              <dl className="sc-datalist">
+                <Fact label="Admin" value={decisionText(row.approvals.admin)} />
+                <Fact label="Client" value={decisionText(row.approvals.client)} />
+              </dl>
+
+              {row.approvals.admin?.note && (
+                <p className="ev-modal__notes">Admin note: {row.approvals.admin.note}</p>
+              )}
+              {row.approvals.client?.note && (
+                <p className="ev-modal__notes">Client note: {row.approvals.client.note}</p>
+              )}
+            </section>
+          )}
 
           {menuEntries.length > 0 && (
             <section>
@@ -85,16 +120,17 @@ export default function EventDetailsModal({ row, onClose }) {
 
           <section>
             <h3 className="sc-section-title">Operations</h3>
-            {row.operations?.crew_list?.length > 0 ? (
+            {ops.crew_list?.length > 0 ? (
               <div className="sc-table-wrap">
                 <table className="sc-table">
-                  <thead><tr><th>Role</th><th>Name</th><th>Contact</th></tr></thead>
+                  <thead><tr><th>Role</th><th>Name</th><th>Contact</th><th>Notes</th></tr></thead>
                   <tbody>
-                    {row.operations.crew_list.map((c, i) => (
+                    {ops.crew_list.map((c, i) => (
                       <tr key={i}>
                         <td>{c.role || "—"}</td>
                         <td>{c.name || "—"}</td>
                         <td>{c.contact || "—"}</td>
+                        <td>{c.notes || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -104,13 +140,29 @@ export default function EventDetailsModal({ row, onClose }) {
               <p className="sc-hint">No crew assigned.</p>
             )}
 
-            {row.operations?.notes && <p className="ev-modal__notes">{row.operations.notes}</p>}
+            <EntryList title="Locations" entries={ops.locations} />
+            <EntryList title="Crockery &amp; cutlery" entries={ops.crockery} />
+
+            {ops.notes_references?.map((n, i) => (
+              <p key={i} className="ev-modal__notes">
+                {n.note}
+                {n.reference && <em> ({n.reference})</em>}
+              </p>
+            ))}
+
+            {ops.notes && <p className="ev-modal__notes">{ops.notes}</p>}
             <Gallery images={opsImages} />
           </section>
 
           <section>
             <h3 className="sc-section-title">Decor</h3>
-            <p className="ev-modal__price">{formatCurrency(row.decor?.estimated_price)}</p>
+
+            <EntryList title="Locations" entries={decor.locations} showPrice />
+            <EntryList title="Flowers &amp; elements" entries={decor.elements} showPrice />
+
+            <p className="ev-modal__price">{formatCurrency(decor.estimated_price)}</p>
+            {decor.additional_info && <p className="ev-modal__notes">{decor.additional_info}</p>}
+
             <Gallery images={decorImages} />
           </section>
 
@@ -118,11 +170,18 @@ export default function EventDetailsModal({ row, onClose }) {
             <section>
               <h3 className="sc-section-title">Proposal</h3>
               <dl className="sc-datalist">
+                <Fact label="Service style" value={row.proposal.service_style} />
                 <Fact label="Subtotal" value={formatCurrency(row.proposal.subtotal)} />
                 <Fact label="Tax" value={formatCurrency(row.proposal.tax_amount)} />
                 <Fact label="Total" value={formatCurrency(row.proposal.total)} />
                 <Fact label="Valid until" value={formatDate(row.proposal.valid_until)} />
               </dl>
+
+              {row.proposal.service_inclusions && (
+                <p className="ev-modal__notes">
+                  Inclusions: {row.proposal.service_inclusions}
+                </p>
+              )}
             </section>
           )}
 
@@ -150,9 +209,40 @@ function Gallery({ images }) {
 
   return (
     <div className="ev-modal__gallery">
-      {images.map((img, i) => (
-        <img key={i} src={imageUrl(img.original_url)} alt="" />
+      {images.map((url, i) => (
+        <img key={`${url}-${i}`} src={imageUrl(url)} alt="" />
       ))}
     </div>
   );
+}
+
+/** Compact read-out of one repeatable operations/decor list. */
+function EntryList({ title, entries, showPrice = false }) {
+  if (!entries?.length) return null;
+
+  return (
+    <>
+      <h4 className="ev-modal__subhead">{title}</h4>
+      <ul className="ev-modal__entries">
+        {entries.map((row, i) => (
+          <li key={i}>
+            <strong>{row.name || "Untitled"}</strong>
+            {showPrice && Number(row.price) > 0 && ` — ${formatCurrency(row.price)}`}
+            {row.notes && <em className="ev-modal__note">{row.notes}</em>}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/** Turns a stored decision into a readable line, or says it is still open. */
+function decisionText(decision) {
+  if (!decision?.decision || decision.decision === "pending") return "Not reviewed yet";
+
+  const verb = decision.decision === "approved" ? "Approved" : "Rejected";
+  const who = decision.by_name ? ` by ${decision.by_name}` : "";
+  const when = decision.at ? ` on ${formatDate(decision.at)}` : "";
+
+  return `${verb}${who}${when}`;
 }

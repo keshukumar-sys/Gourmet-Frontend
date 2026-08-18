@@ -108,3 +108,36 @@
   border-radius: var(--sc-radius-sm);
   border: 1px solid var(--sc-border);
 }
+
+/* Sub-headings and repeatable entries inside the operations / decor cards */
+
+.summary-subhead {
+  margin: 1.4rem 0 0.6rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.summary-entry {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.summary-entry:last-child {
+  border-bottom: none;
+}
+
+.summary-entry__name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.3rem;
+  font-weight: 600;
+}
+
+.summary-entry__price {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

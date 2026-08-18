@@ -173,3 +173,20 @@
   .ev-modal { padding: 0; align-items: stretch; }
   .ev-modal__panel { max-height: 100vh; border-radius: 0; border: none; }
 }
+
+/* Repeatable operations / decor entries inside the modal */
+
+.ev-modal__subhead {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.ev-modal__entries {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}

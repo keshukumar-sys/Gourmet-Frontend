@@ -1,0 +1,141 @@
+/* Repeatable "add entry" rows shared by Operations and Decor */
+
+.entry-card {
+  border: 1px solid var(--sc-line, rgba(255, 255, 255, 0.14));
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.1rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.entry-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.entry-card__index {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.entry-card__body {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.entry-add {
+  margin-top: 0.25rem;
+}
+
+/* Per-entry uploader */
+
+.entry-images__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.entry-images input[type="file"] {
+  max-width: 100%;
+}
+
+.entry-images__grid {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.entry-images__grid li {
+  position: relative;
+  width: 92px;
+  height: 92px;
+}
+
+.entry-images__grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.entry-images__grid button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: var(--sc-danger, #d9534f);
+  color: #fff;
+}
+
+.entry-images__grid button:hover {
+  filter: brightness(1.12);
+}
+
+/* Field groupings used inside the entry cards */
+
+.entry-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.entry-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .entry-grid-2,
+  .entry-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The estimated-price callout at the foot of the summary */
+
+.estimate-box {
+  margin-top: 1.25rem;
+  border: 2px solid var(--sc-blush, #e8b4b8);
+  border-radius: 14px;
+  padding: 1.4rem 1.5rem;
+  text-align: center;
+}
+
+.estimate-box__label {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.estimate-box__value {
+  margin: 0.5rem 0 0.65rem;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.estimate-box__note {
+  margin: 0;
+  font-size: 0.82rem;
+  font-style: italic;
+  opacity: 0.8;
+}

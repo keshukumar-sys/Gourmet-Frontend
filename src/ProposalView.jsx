@@ -6,7 +6,11 @@ import api, { errorMessage, isAdmin, imageUrl } from "./api";
 import { useToast } from "./Toast";
 import Stepper from "./Stepper";
 import { formatCurrency, formatDate } from "./format";
+import { collectEntryImages } from "./EntryFields";
+import WhatsAppShare from "./WhatsAppShare";
+import { STATUS_LABELS } from "./eventShape";
 import "./Proposal.css";
+import "./EntryFields.css";
 
 /**
  * The client-facing proposal document.
@@ -25,6 +29,7 @@ export default function ProposalView() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,43 +63,112 @@ export default function ProposalView() {
     [eventId]
   );
 
-  const opsImages = (event?.images || []).filter((i) => i.section === "operations");
-  const decorImages = (event?.images || []).filter((i) => i.section === "decor");
+  const operations = event?.operations || {};
+  const decor = event?.decor || {};
+  const approvals = event?.approvals || {};
+  const estimate = data?.estimate;
+  const admin = isAdmin();
+
+  // Older events kept their uploads in one flat list; newer ones hang them off
+  // the individual entries. Show both so nothing silently disappears.
+  const opsImages = [
+    ...(event?.images || []).filter((i) => i.section === "operations").map((i) => i.original_url),
+    ...collectEntryImages(
+      operations.crew_list || [],
+      operations.locations || [],
+      operations.crockery || [],
+      operations.notes_references || []
+    )
+  ];
+
+  const decorImages = [
+    ...(event?.images || []).filter((i) => i.section === "decor").map((i) => i.original_url),
+    ...collectEntryImages(decor.locations || [], decor.elements || [])
+  ];
+
+  /**
+   * Record an approval decision. The review endpoints return an unpopulated
+   * event, so only the fields they actually change are merged in — replacing
+   * the whole object would drop the populated menu and template.
+   */
+  const submitReview = async (who, decision) => {
+    let note = "";
+
+    if (decision === "reject") {
+      const reason = window.prompt("Add a note explaining the rejection (optional):", "");
+      if (reason === null) return; // cancelled
+      note = reason;
+    }
+
+    setReviewing(true);
+    try {
+      const res = await api.put(`/events/${eventId}/review/${who}`, { decision, note });
+
+      if (res.data.success) {
+        const updated = res.data.event;
+        setData((prev) => ({
+          ...prev,
+          event: { ...prev.event, status: updated.status, approvals: updated.approvals }
+        }));
+        toast.success(decision === "approve" ? "Proposal approved." : "Proposal rejected.");
+      }
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not record the decision"));
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+  /**
+   * Render the document to a paginated A4 PDF.
+   *
+   * Shared by the download button and the WhatsApp hand-off so both send the
+   * client exactly the same file.
+   */
+  const buildPdf = async () => {
+    if (!docRef.current) throw new Error("The proposal is not ready yet.");
+
+    const canvas = await html2canvas(docRef.current, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      windowWidth: docRef.current.scrollWidth
+    });
+
+    // Paginate the capture across A4 pages instead of squashing it onto one.
+    const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pageW) / canvas.width;
+
+    let remaining = imgH;
+    let position = 0;
+    const imgData = canvas.toDataURL("image/png");
+
+    pdf.addImage(imgData, "PNG", 0, position, pageW, imgH, undefined, "FAST");
+    remaining -= pageH;
+
+    while (remaining > 0) {
+      position -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, pageW, imgH, undefined, "FAST");
+      remaining -= pageH;
+    }
+
+    return pdf;
+  };
+
+  const pdfFileName = () => {
+    const client = (details.contact_info?.name || "Client").replace(/\s+/g, "_");
+    return `Proposal_${client}_${proposalRef}.pdf`;
+  };
 
   const downloadPDF = async () => {
-    if (!docRef.current) return;
     setDownloading(true);
 
     try {
-      const canvas = await html2canvas(docRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        windowWidth: docRef.current.scrollWidth
-      });
-
-      // Paginate the capture across A4 pages instead of squashing it onto one.
-      const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgH = (canvas.height * pageW) / canvas.width;
-
-      let remaining = imgH;
-      let position = 0;
-      const imgData = canvas.toDataURL("image/png");
-
-      pdf.addImage(imgData, "PNG", 0, position, pageW, imgH);
-      remaining -= pageH;
-
-      while (remaining > 0) {
-        position -= pageH;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pageW, imgH);
-        remaining -= pageH;
-      }
-
-      const client = (details.contact_info?.name || "Client").replace(/\s+/g, "_");
-      pdf.save(`Proposal_${client}_${proposalRef}.pdf`);
+      const pdf = await buildPdf();
+      pdf.save(pdfFileName());
       toast.success("Proposal downloaded.");
     } catch (err) {
       console.error(err);
@@ -103,6 +177,9 @@ export default function ProposalView() {
       setDownloading(false);
     }
   };
+
+  /** The same PDF, as a blob the share dialog can upload. */
+  const buildPdfBlob = async () => (await buildPdf()).output("blob");
 
   const finishFlow = () => {
     setFinishing(true);
@@ -163,9 +240,83 @@ export default function ProposalView() {
           <button className="sc-btn" onClick={downloadPDF} disabled={downloading}>
             {downloading ? "Preparing…" : "Download PDF"}
           </button>
+          <WhatsAppShare
+            eventId={eventId}
+            docType="proposal"
+            defaultNumber={details.contact_info?.phone}
+            defaultMessage={whatsappMessage(details, proposalRef)}
+            buildPdf={buildPdfBlob}
+          />
           <button className="sc-btn sc-btn--accent" onClick={finishFlow} disabled={finishing}>
             Done
           </button>
+        </div>
+      </div>
+
+      <div className="propview-review">
+        <div className="propview-review__status">
+          <span className="sc-badge">{STATUS_LABELS[event.status] || event.status}</span>
+
+          {approvals.admin?.decision && approvals.admin.decision !== "pending" && (
+            <p className="propview-review__note">
+              Admin {approvals.admin.decision}
+              {approvals.admin.by_name ? ` by ${approvals.admin.by_name}` : ""}
+              {approvals.admin.at ? ` on ${formatDate(approvals.admin.at)}` : ""}
+              {approvals.admin.note ? ` — "${approvals.admin.note}"` : ""}
+            </p>
+          )}
+
+          {approvals.client?.decision && approvals.client.decision !== "pending" && (
+            <p className="propview-review__note">
+              Client {approvals.client.decision}
+              {approvals.client.at ? ` on ${formatDate(approvals.client.at)}` : ""}
+              {approvals.client.note ? ` — "${approvals.client.note}"` : ""}
+            </p>
+          )}
+        </div>
+
+        <div className="propview-review__actions">
+          {admin ? (
+            <>
+              <button
+                className="sc-btn sc-btn--sm"
+                onClick={() => submitReview("admin", "approve")}
+                disabled={reviewing || approvals.admin?.decision === "approved"}
+              >
+                Approve as admin
+              </button>
+              <button
+                className="sc-btn sc-btn--danger sc-btn--sm"
+                onClick={() => submitReview("admin", "reject")}
+                disabled={reviewing || approvals.admin?.decision === "rejected"}
+              >
+                Reject
+              </button>
+            </>
+          ) : approvals.admin?.decision === "approved" ? (
+            <>
+              <button
+                className="sc-btn sc-btn--sm"
+                onClick={() => submitReview("client", "approve")}
+                disabled={reviewing || approvals.client?.decision === "approved"}
+              >
+                Client approved
+              </button>
+              <button
+                className="sc-btn sc-btn--danger sc-btn--sm"
+                onClick={() => submitReview("client", "reject")}
+                disabled={reviewing || approvals.client?.decision === "rejected"}
+              >
+                Client rejected
+              </button>
+            </>
+          ) : (
+            <span className="propview-review__note">
+              {approvals.admin?.decision === "rejected"
+                ? "Rejected by admin — edit the proposal and resubmit."
+                : "Waiting on admin approval before this can go to the client."}
+            </span>
+          )}
         </div>
       </div>
 
@@ -212,6 +363,10 @@ export default function ProposalView() {
                   <dd>{details.contact_info.email}</dd>
                 </div>
               )}
+              <div className="propdoc__fact">
+                <dt>Prepared by</dt>
+                <dd>{event.created_by?.name || event.user_id?.name || "—"}</dd>
+              </div>
             </dl>
           </section>
 
@@ -288,72 +443,114 @@ export default function ProposalView() {
           )}
 
           {/* Service & crew */}
-          {(event.operations?.crew_list?.length > 0 || event.operations?.notes || opsImages.length > 0) && (
-            <section className="propdoc__section">
-              <h2>Service &amp; crew</h2>
+          {(operations.crew_list?.length > 0 ||
+            operations.locations?.length > 0 ||
+            operations.crockery?.length > 0 ||
+            operations.notes_references?.length > 0 ||
+            operations.notes ||
+            opsImages.length > 0) && (
+              <section className="propdoc__section">
+                <h2>Service &amp; crew</h2>
 
-              {event.operations?.crew_list?.length > 0 && (
-                <div className="sc-table-wrap">
-                  <table className="propdoc__table">
-                    <thead>
-                      <tr>
-                        <th>Role</th>
-                        <th>Name</th>
-                        <th>Contact</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {event.operations.crew_list.map((crew, i) => (
-                        <tr key={i}>
-                          <td>{crew.role || "—"}</td>
-                          <td>{crew.name || "—"}</td>
-                          <td>{crew.contact || "—"}</td>
+                {operations.crew_list?.length > 0 && (
+                  <div className="sc-table-wrap">
+                    <table className="propdoc__table">
+                      <thead>
+                        <tr>
+                          <th>Role</th>
+                          <th>Name</th>
+                          <th>Contact</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {operations.crew_list.map((crew, i) => (
+                          <tr key={i}>
+                            <td>{crew.role || "—"}</td>
+                            <td>{crew.name || "—"}</td>
+                            <td>{crew.contact || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-              {event.operations?.notes && (
-                <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
-                  <h3>Notes</h3>
-                  <p>{event.operations.notes}</p>
-                </div>
-              )}
+                <EntryLines title="Locations" entries={operations.locations} />
+                <EntryLines title="Crockery & cutlery" entries={operations.crockery} />
 
-              {opsImages.length > 0 && (
-                <div className="propdoc__gallery" style={{ marginTop: "1rem" }}>
-                  {opsImages.map((img, i) => (
-                    <img key={i} src={imageUrl(img.original_url)} alt="Venue and setup reference" />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+                {operations.notes_references?.length > 0 && (
+                  <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
+                    <h3>Notes &amp; references</h3>
+                    {operations.notes_references.map((row, i) => (
+                      <p key={i}>
+                        {row.note}
+                        {row.reference && <em> ({row.reference})</em>}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {operations.notes && (
+                  <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
+                    <h3>Notes</h3>
+                    <p>{operations.notes}</p>
+                  </div>
+                )}
+
+                {opsImages.length > 0 && (
+                  <div className="propdoc__gallery" style={{ marginTop: "1rem" }}>
+                    {opsImages.map((url, i) => (
+                      <img key={`${url}-${i}`} src={imageUrl(url)} alt="Venue and setup reference" />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
           {/* Decor */}
-          {(decorImages.length > 0 || event.decor?.estimated_price > 0) && (
-            <section className="propdoc__section">
-              <h2>Decor</h2>
-              {event.decor?.estimated_price > 0 && (
-                <p className="propdoc__lead" style={{ marginBottom: "1rem" }}>
-                  Estimated decor package: <strong>{formatCurrency(event.decor.estimated_price)}</strong>
-                </p>
-              )}
-              {decorImages.length > 0 && (
-                <div className="propdoc__gallery">
-                  {decorImages.map((img, i) => (
-                    <img key={i} src={imageUrl(img.original_url)} alt="Decor reference" />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+          {(decorImages.length > 0 ||
+            decor.estimated_price > 0 ||
+            decor.locations?.length > 0 ||
+            decor.elements?.length > 0 ||
+            decor.additional_info) && (
+              <section className="propdoc__section">
+                <h2>Decor</h2>
+
+                {decor.estimated_price > 0 && (
+                  <p className="propdoc__lead" style={{ marginBottom: "1rem" }}>
+                    Estimated decor package: <strong>{formatCurrency(decor.estimated_price)}</strong>
+                  </p>
+                )}
+
+                <EntryLines title="Locations" entries={decor.locations} showPrice />
+                <EntryLines title="Flowers & elements" entries={decor.elements} showPrice />
+
+                {decor.additional_info && (
+                  <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
+                    <h3>Additional information</h3>
+                    <p>{decor.additional_info}</p>
+                  </div>
+                )}
+
+                {decorImages.length > 0 && (
+                  <div className="propdoc__gallery">
+                    {decorImages.map((url, i) => (
+                      <img key={`${url}-${i}`} src={imageUrl(url)} alt="Decor reference" />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
           {/* Investment */}
           <section className="propdoc__section">
             <h2>Investment</h2>
+
+            {proposal.service_style && (
+              <p className="propdoc__lead" style={{ marginBottom: "1rem" }}>
+                Service style: <strong>{proposal.service_style}</strong>
+              </p>
+            )}
 
             <div className="sc-table-wrap">
               <table className="propdoc__table">
@@ -396,10 +593,23 @@ export default function ProposalView() {
                 </tbody>
 
                 <tfoot>
-                  <tr>
-                    <td colSpan="3" className="num">Subtotal</td>
-                    <td className="num">{formatCurrency(proposal.subtotal)}</td>
-                  </tr>
+                  {proposal.special_price > 0 ? (
+                    <>
+                      <tr>
+                        <td colSpan="3" className="num">List price</td>
+                        <td className="num">{formatCurrency(proposal.list_subtotal)}</td>
+                      </tr>
+                      <tr>
+                        <td colSpan="3" className="num">Special price</td>
+                        <td className="num">{formatCurrency(proposal.subtotal)}</td>
+                      </tr>
+                    </>
+                  ) : (
+                    <tr>
+                      <td colSpan="3" className="num">Subtotal</td>
+                      <td className="num">{formatCurrency(proposal.subtotal)}</td>
+                    </tr>
+                  )}
                   {proposal.tax_percent > 0 && (
                     <tr>
                       <td colSpan="3" className="num">Tax ({proposal.tax_percent}%)</td>
@@ -423,6 +633,13 @@ export default function ProposalView() {
                 </tfoot>
               </table>
             </div>
+
+            {proposal.service_inclusions && (
+              <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
+                <h3>Service inclusions</h3>
+                <p>{proposal.service_inclusions}</p>
+              </div>
+            )}
           </section>
 
           {/* Terms */}
@@ -446,6 +663,17 @@ export default function ProposalView() {
             </section>
           )}
 
+          {/* The decor-and-operations estimate, restated as the client sees it */}
+          {estimate?.total > 0 && (
+            <section className="estimate-box">
+              <p className="estimate-box__label">Estimated Price</p>
+              <p className="estimate-box__value">{formatCurrency(estimate.total)}</p>
+              <p className="estimate-box__note">
+                *This Pricing is an average cost for decor and operations only.
+              </p>
+            </section>
+          )}
+
         </div>
 
         <footer className="propdoc__footer">
@@ -455,4 +683,38 @@ export default function ProposalView() {
       </article>
     </div>
   );
+}
+
+/** Print one of the repeatable operations/decor lists as document copy. */
+function EntryLines({ title, entries, showPrice = false }) {
+  if (!entries?.length) return null;
+
+  return (
+    <div className="propdoc__terms" style={{ marginTop: "1rem" }}>
+      <h3>{title}</h3>
+      <ul>
+        {entries.map((row, i) => (
+          <li key={i}>
+            <strong>{row.name || "Untitled"}</strong>
+            {showPrice && Number(row.price) > 0 && ` — ${formatCurrency(row.price)}`}
+            {row.notes && <span className="propdoc__extra-desc">{row.notes}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Opening line for the WhatsApp message, built from the event facts. */
+function whatsappMessage(details, ref) {
+  const name = details.contact_info?.name;
+  const occasion = details.event_type;
+  const when = details.event_date ? formatDate(details.event_date) : "";
+
+  const greeting = name ? `Hi ${name},` : "Hello,";
+  const about = occasion
+    ? `here is the proposal for your ${occasion}${when ? ` on ${when}` : ""}.`
+    : "here is your event proposal.";
+
+  return `${greeting} ${about}\n\nSocial Catering — ref ${ref}`;
 }

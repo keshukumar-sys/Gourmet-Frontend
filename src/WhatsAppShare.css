@@ -1,0 +1,122 @@
+/* WhatsApp hand-off button and its dialog */
+
+.sc-btn--wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #25d366;
+  color: #06301a;
+  text-decoration: none;
+}
+
+.sc-btn--wa:hover:not(:disabled) {
+  background: #1fbe5b;
+}
+
+.wa-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(6, 20, 30, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.wa-modal__panel {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--sc-navy, #164764);
+  color: inherit;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.wa-modal__head,
+.wa-modal__foot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.35rem;
+}
+
+.wa-modal__head {
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.wa-modal__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.wa-modal__close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.wa-modal__close:hover {
+  opacity: 1;
+}
+
+.wa-modal__body {
+  padding: 1.35rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.wa-modal__foot {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.wa-number {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.wa-note {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.wa-ready {
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  background: rgba(37, 211, 102, 0.12);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.wa-ready p {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+}
+
+.wa-ready__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .wa-number { grid-template-columns: 1fr; }
+  .wa-modal__foot { flex-direction: column-reverse; align-items: stretch; }
+}
+
+@media print {
+  .wa-modal { display: none; }
+}
