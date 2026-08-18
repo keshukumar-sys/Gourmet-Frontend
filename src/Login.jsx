@@ -54,7 +54,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card sc-fade-in">
         <div className="auth-brand">
-          <h1>Social Catering</h1>
+          <h1>Gourmet Events</h1>
           <p>Event Studio</p>
         </div>
 
