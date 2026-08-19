@@ -430,7 +430,7 @@ export default function Proposal() {
 
         {/* Terms + running total */}
         <section className="sc-card">
-          <h2 className="sc-section-title">Terms &amp; total</h2>
+          <h2 className="sc-section-title">Terms &amp; Total</h2>
 
           <div className="prop-terms">
             <div className="prop-terms__fields">
@@ -482,7 +482,7 @@ export default function Proposal() {
             </div>
 
             <aside className="prop-total" aria-live="polite">
-              <h3>Running total</h3>
+              <h3>Running Total</h3>
 
               {Number(specialPrice) > 0 && (
                 <div className="prop-total__row prop-total__row--muted">
